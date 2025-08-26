@@ -1,410 +1,164 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<title>Arcana Idle — Phase 2</title>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<style>
-  :root{
-    --bg:#0a0b10; --card:#11131b; --ink:#e8e8ee; --muted:#9aa3b0;
-    --pri:#ff1fb8; --sec:#00e0ff; --acc:#7cff4d; --warn:#ffb020; --bad:#ff4d6d;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%;}
-  body{margin:0;background:linear-gradient(180deg,#080910,#121423);color:var(--ink);font-family: ui-sans-serif,system-ui,Segoe UI,Roboto,Inter,Arial;}
-  .wrap{max-width:1100px;margin:0 auto;padding:16px;}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-  .title{font-weight:800;letter-spacing:.3px;color:var(--sec);text-shadow:0 0 12px rgba(0,224,255,.35);}
-  .controls{display:flex;gap:8px;flex-wrap:wrap}
-  button{font-weight:700;cursor:pointer}
-  .btn{background:linear-gradient(90deg,var(--pri),var(--sec));color:#000;border:0;padding:8px 12px;border-radius:10px}
-  .ghost{background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--sec);padding:8px 10px;border-radius:10px}
-  .ghost:hover{background:rgba(255,255,255,.05)}
-  .grid{display:grid;grid-template-columns: 250px 1fr; gap:12px; align-items:start}
-  .left,.right{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px}
-  .kv{display:flex;justify-content:space-between;gap:8px;padding:6px 4px;border-bottom:1px dashed rgba(255,255,255,.05)}
-  .hr{height:1px;background:rgba(255,255,255,.06);margin:8px 0;border-radius:2px}
-  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-  .tab{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);cursor:pointer;color:var(--muted)}
-  .tab.active{background:linear-gradient(180deg,rgba(0,224,255,.12),transparent);color:var(--ink);border-color:rgba(0,224,255,.25)}
-  .panel{display:none}
-  .panel.active{display:block}
-  .list{max-height:240px;overflow:auto;padding:8px;background:rgba(0,0,0,.25);border-radius:10px}
-  .tile{background:linear-gradient(180deg,rgba(255,31,184,.08),transparent);padding:10px;border-radius:10px;margin-bottom:8px}
-  .small{font-size:12px;color:var(--muted)}
-  .badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:11px;background:rgba(0,224,255,.12);color:var(--sec)}
-  .num{font-variant-numeric: tabular-nums}
-
-  /* Chat */
-  .chat{position:fixed;left:12px;right:12px;bottom:12px;display:flex;gap:8px;align-items:flex-end;z-index:50}
-  .chat .box{flex:1;background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:12px;max-height:220px;display:flex;flex-direction:column}
-  .chat .hdr{display:flex;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.06)}
-  .chat .chan{padding:4px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.08);color:var(--muted);cursor:pointer}
-  .chat .chan.active{background:rgba(124,255,77,.12);color:var(--ink)}
-  .chat .log{flex:1;overflow:auto;padding:8px}
-  .chat .input{display:flex;gap:8px;padding:8px;border-top:1px solid rgba(255,255,255,.06)}
-  .chat input{flex:1;background:#0b0d16;border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--ink);padding:8px}
-
-  .collapse{position:fixed;right:12px;bottom:12px;z-index:51}
-
-  /* Pixel sprites (inline SVG containers) */
-  .sprite{image-rendering:pixelated;border:1px solid rgba(255,255,255,.1);background:#0c0f18;border-radius:8px;padding:6px;display:inline-grid;place-items:center}
-
-  /* Responsive */
-  @media (max-width:900px){ .grid{grid-template-columns:1fr;} .chat{left:8px;right:8px} }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Persistent Browser Game</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f0f0; }
+        #game-container { display: flex; }
+        #sidebar { width: 250px; padding: 10px; background-color: #333; color: #fff; }
+        #main-game { flex-grow: 1; padding: 10px; }
+        .button { padding: 10px; margin: 5px; cursor: pointer; }
+        .button:hover { background-color: #555; }
+        .craft-item { margin: 5px; padding: 8px; background-color: #222; color: #fff; border: 1px solid #444; }
+        .craft-item:hover { background-color: #444; }
+        .rarity-common { color: gray; }
+        .rarity-rare { color: blue; }
+        .rarity-epic { color: purple; }
+        #stats { margin-top: 20px; }
+    </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div>
-      <div class="title">Arcana Idle — Phase 2</div>
-      <div class="small">Turn-based combat · skill tree · events · pixel art · autosave</div>
-    </div>
-    <div class="controls">
-      <button class="ghost" id="saveBtn">Save</button>
-      <button class="ghost" id="loadBtn">Load</button>
-      <button class="ghost" id="resetBtn">Reset</button>
-    </div>
-  </header>
-
-  <div class="grid">
-    <aside class="left">
-      <div class="kv"><div>Name</div><div id="uiName">Pilot</div></div>
-      <div class="kv"><div>Level</div><div><span id="uiLevel" class="num">1</span> <span class="small" id="uiXP">(0/10)</span></div></div>
-      <div class="kv"><div>Skill Pts</div><div id="uiSP" class="num">0</div></div>
-      <div class="kv"><div>Credits</div><div id="uiCred" class="num">0</div></div>
-      <div class="hr"></div>
-      <div class="small" style="margin-bottom:6px">Resources <span class="badge" id="rateBadge">1x</span></div>
-      <div id="resList" class="list"></div>
-      <div class="hr"></div>
-      <div class="small" style="margin-bottom:6px">Auto-streams (max 2)</div>
-      <div id="autoList" class="list"></div>
-    </aside>
-
-    <main class="right">
-      <div class="tabs">
-        <div data-tab="hub" class="tab active">Hub</div>
-        <div data-tab="battle" class="tab">Battle</div>
-        <div data-tab="upgrades" class="tab">Upgrades</div>
-        <div data-tab="skills" class="tab">Skills</div>
-        <div data-tab="inventory" class="tab">Inventory</div>
-        <div data-tab="events" class="tab">Events</div>
-        <div data-tab="settings" class="tab">Settings</div>
-      </div>
-
-      <!-- HUB -->
-      <section id="panel-hub" class="panel active">
-        <div class="tile">
-          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-            <div class="sprite" title="Pilot" style="width:80px;height:80px">${''}
-              <svg viewBox="0 0 16 16" width="64" height="64">
-                <rect width="16" height="16" fill="#0b0f1a"/>
-                <rect x="6" y="2" width="4" height="4" fill="#00e0ff"/>
-                <rect x="5" y="6" width="6" height="1" fill="#7cff4d"/>
-                <rect x="4" y="7" width="8" height="1" fill="#7cff4d"/>
-                <rect x="6" y="8" width="4" height="5" fill="#ff1fb8"/>
-                <rect x="5" y="13" width="6" height="1" fill="#00e0ff"/>
-              </svg>
+    <div id="game-container">
+        <div id="sidebar">
+            <h2>Game Stats</h2>
+            <div id="stats">
+                <p>HP: <span id="player-hp">100</span></p>
+                <p>ATK: <span id="player-atk">10</span></p>
+                <p>DEF: <span id="player-def">5</span></p>
+                <p>Crit Chance: <span id="player-crit">5%</span></p>
+                <hr>
+                <h3>Inventory</h3>
+                <ul id="inventory-list"></ul>
+                <hr>
+                <h3>Crafting</h3>
+                <div id="crafting-area">
+                    <div class="craft-item" data-item="wooden-sword" onclick="craftItem('wooden-sword')">Craft Wooden Sword</div>
+                    <div class="craft-item" data-item="iron-sword" onclick="craftItem('iron-sword')">Craft Iron Sword</div>
+                </div>
+                <hr>
+                <h3>Daily Quests</h3>
+                <div id="daily-quests">
+                    <button onclick="startQuest()">Start Daily Quest</button>
+                    <div id="quests-status"></div>
+                </div>
             </div>
-            <div>
-              <strong>Welcome to the Hub</strong>
-              <div class="small">Jump to <span class="badge">Battle Zones</span>, manage gear, and plan upgrades.</div>
-              <div style="margin-top:8px" class="small">Tip: enable two auto streams in the sidebar to gather passively.</div>
-            </div>
-          </div>
         </div>
-        <div class="tile">
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn" data-nav="battle">Go Fight</button>
-            <button class="ghost" data-nav="inventory">Open Inventory</button>
-            <button class="ghost" data-nav="upgrades">Open Upgrades</button>
-            <button class="ghost" id="harvestBtn">Manual Harvest (+)</button>
-          </div>
+        <div id="main-game">
+            <h1>Battle Zone</h1>
+            <button class="button" onclick="startBattle()">Start Battle</button>
+            <div id="battle-log"></div>
         </div>
-      </section>
-
-      <!-- BATTLE -->
-      <section id="panel-battle" class="panel">
-        <div class="tile">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-            <div>
-              <strong>Turn‑Based Combat</strong>
-              <div class="small">Choose an enemy and attack. Defeat foes to gain loot and credits.</div>
-            </div>
-            <div class="sprite" style="width:80px;height:80px" title="Enemy">
-              <svg viewBox="0 0 16 16" width="64" height="64">
-                <rect width="16" height="16" fill="#120b12"/>
-                <rect x="4" y="2" width="8" height="3" fill="#ff1fb8"/>
-                <rect x="3" y="5" width="10" height="1" fill="#ff1fb8"/>
-                <rect x="5" y="7" width="6" height="5" fill="#00e0ff"/>
-                <rect x="4" y="12" width="8" height="1" fill="#ff1fb8"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div class="tile" id="enemyPicker"></div>
-        <div class="tile" id="combatUI"></div>
-      </section>
-
-      <!-- UPGRADES -->
-      <section id="panel-upgrades" class="panel">
-        <div class="tile"><strong>Upgrade Modules</strong><div class="small">Spend resources to boost extraction and combat.</div></div>
-        <div id="upgradeShop" class="list"></div>
-      </section>
-
-      <!-- SKILLS -->
-      <section id="panel-skills" class="panel">
-        <div class="tile"><strong>Skill Tree</strong><div class="small">Spend skill points earned on level‑up.</div></div>
-        <div id="skillTree" class="list"></div>
-      </section>
-
-      <!-- INVENTORY -->
-      <section id="panel-inventory" class="panel">
-        <div class="tile"><strong>Inventory & Gear</strong><div class="small">Basic slots: Weapon · Armor · Trinket</div></div>
-        <div id="gearSlots" class="tile"></div>
-        <div id="inventory" class="list"></div>
-      </section>
-
-      <!-- EVENTS -->
-      <section id="panel-events" class="panel">
-        <div class="tile"><strong>Dynamic Events</strong> <button class="ghost" id="triggerEvent">Trigger (debug)</button>
-          <div class="small">Events can boost or hinder resource rates temporarily.</div>
-        </div>
-        <div id="events" class="list"></div>
-      </section>
-
-      <!-- SETTINGS -->
-      <section id="panel-settings" class="panel">
-        <div class="tile"><strong>Settings</strong></div>
-        <div class="tile">
-          <div class="kv"><div>Autosave</div><div><input type="checkbox" id="autosaveToggle"></div></div>
-          <div class="kv"><div>Tick (ms)</div><div><input type="number" id="tickInput" min="250" max="5000" value="1000" style="width:110px"></div></div>
-          <button class="btn" id="applySettings">Apply</button>
-        </div>
-      </section>
-    </main>
-  </div>
-</div>
-
-<!-- Chat (collapsible) -->
-<button id="toggleChat" class="ghost collapse">Chat</button>
-<div id="chat" class="chat" style="display:none">
-  <div class="box">
-    <div class="hdr">
-      <div class="chan active" data-chan="global">Global</div>
-      <div class="chan" data-chan="guild">Guild</div>
-      <div class="chan" data-chan="trade">Trade</div>
-      <div class="chan" data-chan="help">Help</div>
     </div>
-    <div id="chatLog" class="log small"></div>
-    <div class="input">
-      <input id="chatInput" placeholder="Type a message (local demo only)"/>
-      <button class="btn" id="sendChat">Send</button>
-    </div>
-  </div>
-</div>
 
-<script>
-/* ===== State ===== */
-const STORAGE_KEY = 'arcana_phase2_v1';
-const DEFAULT_TICK = 1000;
-const RES = ['Steel','Crystal','Plasma','Quantum','Code','AI'];
+    <script>
+        let player = {
+            hp: 100,
+            atk: 10,
+            def: 5,
+            critChance: 5,
+            inventory: [],
+            questsCompleted: 0,
+            lastQuestTime: Date.now()
+        };
 
-const state = {
-  settings: { autosave: true, tick: DEFAULT_TICK },
-  player: { name: localStorage.getItem('arcana_name') || 'Pilot', level:1, xp:0, sp:0, credits: 25 },
-  rates: { Steel:1, Crystal:1, Plasma:1, Quantum:1, Code:1, AI:1 },
-  resources: { Steel:10, Crystal:6, Plasma:3, Quantum:0, Code:0, AI:0 },
-  refined: { Alloy:0, EnergeticShard:0, DataMatrix:0 },
-  auto: [],
-  modifiers: { rate: 1 },
-  inventory: [],
-  gear: { Weapon: null, Armor: null, Trinket: null },
-  upgrades: {},
-  skillTree: {},
-  events: [],
-  combat: { pHP: 100, pMax: 100, enemy: null, log: [] }
-};
+        const resources = {
+            wood: 0,
+            iron: 0
+        };
 
-/* ===== Utilities ===== */
-const $ = sel => document.querySelector(sel);
-const el = (tag, attrs = {}, ...kids) => { const d = document.createElement(tag); Object.entries(attrs).forEach(([k,v])=>{ if(k==='class') d.className=v; else if(k==='text') d.textContent=v; else d.setAttribute(k,v);}); kids.forEach(c=>d.append(typeof c==='string'?document.createTextNode(c):c)); return d; };
-const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-const xpNeeded = lvl => Math.floor(10 * Math.pow(lvl,1.5));
+        const gearRarity = {
+            common: 'rarity-common',
+            rare: 'rarity-rare',
+            epic: 'rarity-epic'
+        };
 
-/* ===== Save / Load ===== */
-function save(manual=false){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); localStorage.setItem('arcana_name', state.player.name); if(manual) console.log('Saved'); }
-function load(){ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return false; try{ Object.assign(state, JSON.parse(raw)); return true; }catch(e){ console.warn('Load error', e); return false; } }
-function reset(){ localStorage.removeItem(STORAGE_KEY); location.reload(); }
+        // Check if progress exists in localStorage
+        if(localStorage.getItem('playerProgress')) {
+            player = JSON.parse(localStorage.getItem('playerProgress'));
+        }
 
-/* ===== Tabs & Nav ===== */
-function setTab(id){ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===id)); document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id===`panel-${id}`)); }
-$('.tabs').addEventListener('click', (e)=>{ const t=e.target.closest('.tab'); if(!t) return; setTab(t.dataset.tab); });
-// hub quick-nav
-function bindNav(){ document.querySelectorAll('[data-nav]').forEach(b=> b.addEventListener('click', ()=> setTab(b.dataset.nav))); }
+        // Update player stats on screen
+        function updateStats() {
+            document.getElementById('player-hp').innerText = player.hp;
+            document.getElementById('player-atk').innerText = player.atk;
+            document.getElementById('player-def').innerText = player.def;
+            document.getElementById('player-crit').innerText = player.critChance + '%';
+            updateInventory();
+        }
 
-/* ===== Renderers ===== */
-function renderSidebar(){
-  $('#uiName').textContent = state.player.name;
-  $('#uiLevel').textContent = state.player.level;
-  $('#uiXP').textContent = `(${Math.floor(state.player.xp)}/${xpNeeded(state.player.level)})`;
-  $('#uiSP').textContent = state.player.sp;
-  $('#uiCred').textContent = state.player.credits;
-  $('#rateBadge').textContent = `${state.modifiers.rate.toFixed(2)}x`;
-  // resources
-  const box = $('#resList'); box.innerHTML='';
-  RES.forEach(k=>{ box.appendChild(el('div',{class:'kv'}, el('div',{},k), el('div',{class:'num'}, String(state.resources[k]||0)))); });
-  // autos
-  const abox=$('#autoList'); abox.innerHTML='';
-  RES.forEach(k=>{
-    const row = el('div',{class:'kv'});
-    const chk = el('input',{type:'checkbox'}); chk.checked = state.auto.includes(k);
-    chk.addEventListener('change', (ev)=>{ if(ev.target.checked){ if(state.auto.length>=2){ ev.target.checked=false; return alert('Max 2 auto streams'); } state.auto.push(k); } else state.auto = state.auto.filter(x=>x!==k); save(); });
-    row.append(chk, el('div',{}, ` ${k} (${state.rates[k]||1}/s)`)); abox.appendChild(row);
-  });
-}
+        // Update inventory UI
+        function updateInventory() {
+            const inventoryList = document.getElementById('inventory-list');
+            inventoryList.innerHTML = '';
+            player.inventory.forEach(item => {
+                let li = document.createElement('li');
+                li.innerText = item.name;
+                li.classList.add(item.rarity);
+                inventoryList.appendChild(li);
+            });
+        }
 
-/* ===== Inventory & Gear ===== */
-function addItem(type,name,stats){ state.inventory.push({ id:'it'+Math.random().toString(36).slice(2,8), type, name, stats }); }
-function renderInventory(){
-  // gear slots
-  const g = $('#gearSlots'); g.innerHTML='';
-  const mk = (slot)=>{ const cur = state.gear[slot]; const wrap = el('div',{});
-    wrap.appendChild(el('div',{class:'small'}, `${slot}`));
-    wrap.appendChild(el('div',{}, cur? `${cur.name} (${cur.type})` : '— empty —'));
-    const btn = el('button',{class:'ghost'}, cur? 'Unequip' : 'Auto-equip');
-    btn.addEventListener('click',()=>{
-      if(cur){ state.inventory.push(cur); state.gear[slot]=null; renderInventory(); return; }
-      // naive auto-equip: first matching type
-      const idx = state.inventory.findIndex(x=> (slot==='Weapon'&&x.type==='weapon')||(slot==='Armor'&&x.type==='armor')||(slot==='Trinket'&&x.type==='trinket'));
-      if(idx>-1){ state.gear[slot]=state.inventory.splice(idx,1)[0]; renderInventory(); }
-    });
-    wrap.appendChild(btn); return wrap;
-  };
-  g.append(mk('Weapon'), mk('Armor'), mk('Trinket'));
+        // Crafting system
+        function craftItem(itemName) {
+            if(itemName === 'wooden-sword' && resources.wood >= 2) {
+                resources.wood -= 2;
+                const newItem = { name: 'Wooden Sword', rarity: gearRarity.common };
+                player.inventory.push(newItem);
+            } else if(itemName === 'iron-sword' && resources.iron >= 3) {
+                resources.iron -= 3;
+                const newItem = { name: 'Iron Sword', rarity: gearRarity.rare };
+                player.inventory.push(newItem);
+            }
+            updateStats();
+        }
 
-  const box = $('#inventory'); box.innerHTML='';
-  if(state.inventory.length===0) box.appendChild(el('div',{},'No items. Defeat enemies or craft to get loot.'));
-  state.inventory.forEach((i,idx)=>{
-    const row = el('div',{class:'kv'});
-    row.append(el('div',{}, `${i.name} (${i.type})`), el('div',{}, JSON.stringify(i.stats||{})));
-    const b = el('button',{class:'ghost'}, 'Equip'); b.addEventListener('click',()=>{
-      const target = i.type==='weapon'?'Weapon': i.type==='armor'?'Armor':'Trinket';
-      if(state.gear[target]) state.inventory.push(state.gear[target]);
-      state.gear[target] = i; state.inventory.splice(idx,1); renderInventory();
-    });
-    row.appendChild(b); box.appendChild(row);
-  });
-}
+        // Simulate a daily quest
+        function startQuest() {
+            const currentTime = Date.now();
+            const timeDifference = currentTime - player.lastQuestTime;
+            const questCooldown = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-/* ===== Upgrades ===== */
-const shop = [
-  { id:'up1', name:'Extractor Mk.I', cost:{Steel:20, Crystal:10}, apply:()=>{ state.rates.Steel++; state.rates.Crystal++; } },
-  { id:'up2', name:'Quantum Pump', cost:{Plasma:15, Quantum:6}, apply:()=>{ state.rates.Plasma++; state.rates.Quantum++; } },
-  { id:'up3', name:'Neural Mesh', cost:{Code:10, AI:3}, apply:()=>{ state.rates.Code++; state.rates.AI++; } }
-];
-function canAfford(cost){ return Object.entries(cost).every(([k,v])=> (state.resources[k]||0) >= v ); }
-function pay(cost){ Object.entries(cost).forEach(([k,v])=> state.resources[k]-=v ); }
-function renderUpgrades(){
-  const box = $('#upgradeShop'); box.innerHTML='';
-  shop.forEach(s=>{
-    const row = el('div',{class:'tile'});
-    row.append(el('div',{}, el('strong',{}, s.name)));
-    row.append(el('div',{class:'small'}, 'Cost: '+Object.entries(s.cost).map(([k,v])=>`${v} ${k}`).join(', ')));
-    const b = el('button',{class:'btn'}, state.upgrades[s.id] ? 'Owned' : 'Buy'); b.disabled = !!state.upgrades[s.id];
-    b.addEventListener('click',()=>{ if(state.upgrades[s.id])return; if(!canAfford(s.cost)) return alert('Not enough resources'); pay(s.cost); s.apply(); state.upgrades[s.id]=true; renderSidebar(); renderUpgrades(); });
-    row.appendChild(b); box.appendChild(row);
-  });
-}
+            if(timeDifference < questCooldown) {
+                alert('You must wait for your next daily quest!');
+                return;
+            }
 
-/* ===== Skills ===== */
-const skills = [
-  { id:'s1', name:'Kinetic Training', desc:'+5 max HP', cost:1, apply:()=>{ state.combat.pMax+=5; state.combat.pHP+=5; } },
-  { id:'s2', name:'Efficient Mining', desc:'+1 to all base rates', cost:2, apply:()=>{ RES.forEach(k=> state.rates[k]++ ); } },
-  { id:'s3', name:'Tactician', desc:'+10% crit chance (demo)', cost:2, apply:()=>{ state.combat.crit=(state.combat.crit||0)+0.1; } }
-];
-function renderSkills(){
-  const box = $('#skillTree'); box.innerHTML='';
-  skills.forEach(s=>{
-    const row = el('div',{class:'tile'});
-    row.append(el('div',{}, el('strong',{}, s.name)));
-    row.append(el('div',{class:'small'}, `${s.desc} — cost ${s.cost} SP`));
-    const b = el('button',{class:'btn'}, state.skillTree[s.id] ? 'Purchased' : 'Buy'); b.disabled = !!state.skillTree[s.id];
-    b.addEventListener('click',()=>{ if(state.skillTree[s.id])return; if(state.player.sp < s.cost) return alert('Not enough SP'); state.player.sp -= s.cost; state.skillTree[s.id]=true; s.apply(); renderSidebar(); renderSkills(); });
-    row.appendChild(b); box.appendChild(row);
-  });
-}
+            player.lastQuestTime = currentTime;
+            player.questsCompleted += 1;
+            localStorage.setItem('playerProgress', JSON.stringify(player));
 
-/* ===== Events ===== */
-function renderEvents(){ const box=$('#events'); box.innerHTML=''; if(state.events.length===0) box.appendChild(el('div',{},'No active events.')); state.events.forEach(ev=>{ const t=el('div',{class:'tile'}); t.append(el('div',{}, el('strong',{}, ev.title)), el('div',{class:'small'}, ev.desc)); const b=el('button',{class:'ghost'},'Resolve'); b.addEventListener('click',()=>resolveEvent(ev.id,true)); t.appendChild(b); box.appendChild(t); }); }
-function addRandomEvent(){ const id='ev'+Date.now(); const types=[ {title:'Cosmic Storm',desc:'Resource rates -50% for 12s', effect:{type:'rate', mult:0.5, duration:12}}, {title:'Quantum Surge',desc:'Resource rates +50% for 10s', effect:{type:'rate', mult:1.5, duration:10}} ]; const ev={id, ...types[Math.floor(Math.random()*types.length)]}; state.events.push(ev); applyEvent(ev,true); renderEvents(); setTimeout(()=> resolveEvent(id,false), ev.effect.duration*1000); }
-function applyEvent(ev, apply){ if(ev.effect.type==='rate'){ state.modifiers.rate = clamp(state.modifiers.rate * (apply? ev.effect.mult : 1/ev.effect.mult), 0.25, 4); renderSidebar(); } }
-function resolveEvent(id,manual){ const ev=state.events.find(e=>e.id===id); if(!ev) return; applyEvent(ev,false); state.events = state.events.filter(e=>e.id!==id); renderEvents(); if(manual) console.log('Event resolved'); }
-$('#triggerEvent').addEventListener('click', addRandomEvent);
+            // Reward system: Based on quests completed, increase stats.
+            player.atk += 5;
+            player.def += 2;
+            updateStats();
 
-/* ===== Combat ===== */
-const ENEMIES=[
-  { id:'e1', name:'Street Drone', hp:60, atk:[5,10], loot:()=>({ Credits:6, Steel:6 })},
-  { id:'e2', name:'Data Wraith', hp:80, atk:[7,12], loot:()=>({ Credits:9, Code:4, AI:1 })},
-  { id:'e3', name:'Quantum Raider', hp:110, atk:[9,14], loot:()=>({ Credits:12, Crystal:8, Quantum:3 })}
-];
-function renderEnemyPicker(){ const box=$('#enemyPicker'); box.innerHTML=''; const row=el('div',{}); ENEMIES.forEach(e=>{ const t=el('div',{class:'tile'}); t.append(el('div',{}, el('strong',{}, e.name)), el('div',{class:'small'}, `HP ${e.hp} · ATK ${e.atk[0]}–${e.atk[1]}`)); const b=el('button',{class:'btn'}, 'Engage'); b.addEventListener('click',()=> startFight(e)); t.appendChild(b); row.appendChild(t); }); box.appendChild(row); }
-function startFight(base){ const foe = JSON.parse(JSON.stringify(base)); foe.cur=foe.hp; state.combat.enemy = foe; state.combat.log = []; renderCombat(); }
-function roll(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
-function gearAtkBonus(){ let b=0; if(state.gear.Weapon?.stats?.atk) b+=state.gear.Weapon.stats.atk; return b; }
-function attack(){ const c=state.combat; const e=c.enemy; if(!e) return; // player turn
-  const crit = Math.random() < (state.combat.crit||0); const pDmg = roll(8,14) + gearAtkBonus(); const pHit = crit? Math.floor(pDmg*1.7) : pDmg; e.cur = Math.max(0, e.cur - pHit); c.log.push(`You hit ${e.name} for ${pHit}${crit?' (crit)':''}.`);
-  if(e.cur<=0){ const loot=e.loot(); Object.entries(loot).forEach(([k,v])=>{ if(k==='Credits') state.player.credits+=v; else state.resources[k]=(state.resources[k]||0)+v; }); c.log.push(`Defeated ${e.name}! Loot: `+Object.entries(loot).map(([k,v])=>`${v} ${k}`).join(', ')); state.inventory.push({id:'it'+Date.now(), type:'weapon', name:'Looted Shardblade', stats:{atk:2}}); state.player.xp += 4; state.combat.enemy=null; renderSidebar(); renderInventory(); renderCombat(); return; }
-  // enemy turn
-  const eDmg = roll(e.atk[0], e.atk[1]); c.pHP = Math.max(0, c.pHP - eDmg); c.log.push(`${e.name} hits you for ${eDmg}.`);
-  if(c.pHP<=0){ c.pHP=c.pMax; c.log.push('You were knocked out.'); state.combat.enemy=null; }
-  renderCombat();
-}
-function renderCombat(){ const box=$('#combatUI'); box.innerHTML=''; const c=state.combat; if(!c.enemy){ box.appendChild(el('div',{},'No active fight. Pick an enemy above.')); return; } const e=c.enemy; const stat=el('div',{}); stat.append(el('div',{}, `Your HP: ${c.pHP}/${c.pMax}`), el('div',{}, `${e.name} HP: ${e.cur}/${e.hp}`)); const atk=el('button',{class:'btn'}, 'Attack'); atk.addEventListener('click', attack); const log=el('div',{class:'list small'}); c.log.forEach(l=> log.appendChild(el('div',{}, l))); box.append(stat, el('div',{style:'height:6px'}), atk, el('div',{style:'height:6px'}), log); }
+            document.getElementById('quests-status').innerText = `Quest completed! You have completed ${player.questsCompleted} quests.`;
+            localStorage.setItem('playerProgress', JSON.stringify(player));
+        }
 
-/* ===== Settings & Chat ===== */
-function renderSettings(){ $('#autosaveToggle').checked = state.settings.autosave; $('#tickInput').value = state.settings.tick; }
-$('#applySettings').addEventListener('click', ()=>{ const v = clamp(Number($('#tickInput').value)||DEFAULT_TICK,250,5000); state.settings.autosave = $('#autosaveToggle').checked; state.settings.tick=v; loop.setRate(v); save(true); });
+        // Simulate a battle
+        function startBattle() {
+            let battleLog = document.getElementById('battle-log');
+            const enemyHp = Math.floor(Math.random() * 50) + 50;
+            let damage = player.atk - Math.floor(Math.random() * player.def);
+            if(Math.random() * 100 < player.critChance) {
+                damage *= 2;
+                battleLog.innerHTML += `<p>Critical hit! You dealt ${damage} damage to the enemy!</p>`;
+            } else {
+                battleLog.innerHTML += `<p>You dealt ${damage} damage to the enemy!</p>`;
+            }
 
-// chat (local demo only)
-let currentChan='global';
-$('#toggleChat').addEventListener('click',()=>{ const c=$('#chat'); c.style.display = c.style.display==='none'?'flex':'none'; });
-$('#sendChat').addEventListener('click',()=>{ const inp=$('#chatInput'); const msg=(inp.value||'').trim(); if(!msg) return; const log=$('#chatLog'); const d=new Date(); const line=el('div',{},`[${currentChan}] ${state.player.name}: ${msg}`); log.appendChild(line); log.scrollTop = log.scrollHeight; inp.value=''; });
-$('#chat').addEventListener('click',(e)=>{ const c=e.target.closest('.chan'); if(!c) return; document.querySelectorAll('.chan').forEach(x=>x.classList.remove('active')); c.classList.add('active'); currentChan=c.dataset.chan; });
+            if(enemyHp <= 0) {
+                battleLog.innerHTML += `<p>You won the battle!</p>`;
+            } else {
+                battleLog.innerHTML += `<p>The enemy's remaining health is ${enemyHp - damage}</p>`;
+            }
+        }
 
-/* ===== Game Loop ===== */
-class Loop{ constructor(ms){ this.ms=ms; this.t=null; this.tickCount=0; } start(){ if(this.t) return; this.t=setInterval(()=>this.tick(), this.ms);} stop(){ if(!this.t)return; clearInterval(this.t); this.t=null;} setRate(ms){ this.stop(); this.ms=ms; this.start(); } tick(){ // auto gather
-  state.auto.slice(0,2).forEach(k=>{ const amt = Math.floor((state.rates[k]||1) * state.modifiers.rate); state.resources[k] = (state.resources[k]||0) + amt; });
-  // passive XP
-  state.player.xp += 0.15; const need=xpNeeded(state.player.level); if(state.player.xp>=need){ state.player.xp-=need; state.player.level++; state.player.sp++; }
-  // autosave every ~30s
-  this.tickCount++; if(state.settings.autosave && this.tickCount % Math.ceil(30000/this.ms)===0) save(false);
-  renderSidebar(); }
-}
-const loop = new Loop(state.settings.tick);
-
-/* ===== Wiring ===== */
-$('#saveBtn').addEventListener('click',()=>save(true));
-$('#loadBtn').addEventListener('click',()=>{ if(load()) { renderAll(); alert('Loaded.'); } else alert('No save found'); });
-$('#resetBtn').addEventListener('click', reset);
-$('#harvestBtn').addEventListener('click',()=>{ const k=RES[Math.floor(Math.random()*RES.length)]; const amt=1+Math.floor(Math.random()*4); state.resources[k]+=amt; renderSidebar(); });
-
-function renderAll(){ renderSidebar(); renderUpgrades(); renderSkills(); renderInventory(); renderEnemyPicker(); renderCombat(); renderEvents(); renderSettings(); bindNav(); }
-
-/* ===== Init ===== */
-(function init(){ load(); renderAll(); loop.start(); })();
-
-// ---- Minimal smoke tests in console ----
-console.log('%c[Tests] starting','color:#7cff4d');
-(function tests(){ try{
-  console.assert(typeof state.player.name==='string','player name exists');
-  console.assert(xpNeeded(1)>0,'xp calc');
-  const before = state.resources.Steel; state.auto=["Steel"]; loop.tick(); console.assert(state.resources.Steel>=before+1,'auto gather'); state.auto=[];
-  startFight(ENEMIES[0]); const hp=state.combat.enemy.cur; attack(); console.assert(state.combat.enemy===null || state.combat.enemy.cur<=hp,'attack reduces hp');
-  console.log('%c[Tests] ok','color:#7cff4d');
- }catch(e){ console.error('Test failure',e); }
-})();
-</script>
+        // Initialize game
+        updateStats();
+    </script>
 </body>
 </html>
