@@ -1,164 +1,232 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Persistent Browser Game</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f0f0; }
-        #game-container { display: flex; }
-        #sidebar { width: 250px; padding: 10px; background-color: #333; color: #fff; }
-        #main-game { flex-grow: 1; padding: 10px; }
-        .button { padding: 10px; margin: 5px; cursor: pointer; }
-        .button:hover { background-color: #555; }
-        .craft-item { margin: 5px; padding: 8px; background-color: #222; color: #fff; border: 1px solid #444; }
-        .craft-item:hover { background-color: #444; }
-        .rarity-common { color: gray; }
-        .rarity-rare { color: blue; }
-        .rarity-epic { color: purple; }
-        #stats { margin-top: 20px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixelated Battle Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #181818;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+
+    .game-container {
+      background-color: #2e2e2e;
+      width: 800px;
+      height: 600px;
+      border: 5px solid #444;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      padding-bottom: 20px;
+    }
+
+    .header .title {
+      font-size: 30px;
+      font-weight: bold;
+      color: #ff00ff;
+    }
+
+    .sprite {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+    }
+
+    .combat-screen, .inventory-screen, .upgrades-screen {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+    }
+
+    .combat-screen div, .inventory-screen div, .upgrades-screen div {
+      width: 180px;
+      height: 120px;
+      border: 2px solid #ff00ff;
+      background-color: #111;
+      text-align: center;
+      padding: 10px;
+    }
+
+    .combat-screen img {
+      width: 100%;
+      height: 100%;
+    }
+
+    .health-bar {
+      width: 100%;
+      height: 10px;
+      background-color: #555;
+      margin-top: 5px;
+      border-radius: 5px;
+    }
+
+    .health-bar span {
+      display: block;
+      height: 100%;
+      width: 100%;
+      background-color: #f44336;
+      border-radius: 5px;
+    }
+
+    .button {
+      background-color: #ff00ff;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .button:hover {
+      background-color: #e600e6;
+    }
+
+    .button:active {
+      background-color: #990099;
+    }
+  </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="sidebar">
-            <h2>Game Stats</h2>
-            <div id="stats">
-                <p>HP: <span id="player-hp">100</span></p>
-                <p>ATK: <span id="player-atk">10</span></p>
-                <p>DEF: <span id="player-def">5</span></p>
-                <p>Crit Chance: <span id="player-crit">5%</span></p>
-                <hr>
-                <h3>Inventory</h3>
-                <ul id="inventory-list"></ul>
-                <hr>
-                <h3>Crafting</h3>
-                <div id="crafting-area">
-                    <div class="craft-item" data-item="wooden-sword" onclick="craftItem('wooden-sword')">Craft Wooden Sword</div>
-                    <div class="craft-item" data-item="iron-sword" onclick="craftItem('iron-sword')">Craft Iron Sword</div>
-                </div>
-                <hr>
-                <h3>Daily Quests</h3>
-                <div id="daily-quests">
-                    <button onclick="startQuest()">Start Daily Quest</button>
-                    <div id="quests-status"></div>
-                </div>
-            </div>
-        </div>
-        <div id="main-game">
-            <h1>Battle Zone</h1>
-            <button class="button" onclick="startBattle()">Start Battle</button>
-            <div id="battle-log"></div>
-        </div>
+  <div class="game-container">
+    <div class="header">
+      <div class="title">Pixelated Battle Game</div>
+      <div class="stats">
+        <p>Level: <span id="player-level">1</span></p>
+        <p>Health: <span id="player-health">100</span>/100</p>
+      </div>
     </div>
 
-    <script>
-        let player = {
-            hp: 100,
-            atk: 10,
-            def: 5,
-            critChance: 5,
-            inventory: [],
-            questsCompleted: 0,
-            lastQuestTime: Date.now()
-        };
+    <!-- Combat Screen -->
+    <div class="combat-screen">
+      <div>
+        <img src="player_sprite.png" class="sprite" id="player-sprite" alt="Player Sprite">
+        <div class="health-bar"><span id="player-health-bar"></span></div>
+        <p>Player</p>
+      </div>
+      <div>
+        <img src="enemy_sprite.png" class="sprite" id="enemy-sprite" alt="Enemy Sprite">
+        <div class="health-bar"><span id="enemy-health-bar"></span></div>
+        <p>Enemy</p>
+      </div>
+    </div>
 
-        const resources = {
-            wood: 0,
-            iron: 0
-        };
+    <!-- Inventory Screen -->
+    <div class="inventory-screen">
+      <div>
+        <p>Weapon</p>
+        <img src="weapon_sprite.png" class="sprite" alt="Weapon">
+        <p>Attack: 10</p>
+      </div>
+      <div>
+        <p>Armor</p>
+        <img src="armor_sprite.png" class="sprite" alt="Armor">
+        <p>Defense: 5</p>
+      </div>
+    </div>
 
-        const gearRarity = {
-            common: 'rarity-common',
-            rare: 'rarity-rare',
-            epic: 'rarity-epic'
-        };
+    <!-- Upgrades Screen -->
+    <div class="upgrades-screen">
+      <div>
+        <p>Upgrade Weapon</p>
+        <button class="button" id="upgrade-weapon">Upgrade</button>
+      </div>
+      <div>
+        <p>Upgrade Armor</p>
+        <button class="button" id="upgrade-armor">Upgrade</button>
+      </div>
+    </div>
 
-        // Check if progress exists in localStorage
-        if(localStorage.getItem('playerProgress')) {
-            player = JSON.parse(localStorage.getItem('playerProgress'));
-        }
+    <div class="combat-actions">
+      <button class="button" id="attack-button">Attack</button>
+      <button class="button" id="use-item-button">Use Item</button>
+    </div>
+  </div>
 
-        // Update player stats on screen
-        function updateStats() {
-            document.getElementById('player-hp').innerText = player.hp;
-            document.getElementById('player-atk').innerText = player.atk;
-            document.getElementById('player-def').innerText = player.def;
-            document.getElementById('player-crit').innerText = player.critChance + '%';
-            updateInventory();
-        }
+  <script>
+    // Variables for the player and enemy stats
+    const playerHealth = document.getElementById('player-health');
+    const enemyHealth = document.getElementById('enemy-health');
+    const playerHealthBar = document.getElementById('player-health-bar');
+    const enemyHealthBar = document.getElementById('enemy-health-bar');
+    const upgradeWeaponButton = document.getElementById('upgrade-weapon');
+    const upgradeArmorButton = document.getElementById('upgrade-armor');
+    const attackButton = document.getElementById('attack-button');
+    const useItemButton = document.getElementById('use-item-button');
+    
+    // Initial player and enemy stats
+    let playerStats = {
+      health: 100,
+      attack: 10,
+      defense: 5
+    };
 
-        // Update inventory UI
-        function updateInventory() {
-            const inventoryList = document.getElementById('inventory-list');
-            inventoryList.innerHTML = '';
-            player.inventory.forEach(item => {
-                let li = document.createElement('li');
-                li.innerText = item.name;
-                li.classList.add(item.rarity);
-                inventoryList.appendChild(li);
-            });
-        }
+    let enemyStats = {
+      health: 60,
+      attack: 8,
+      defense: 3
+    };
 
-        // Crafting system
-        function craftItem(itemName) {
-            if(itemName === 'wooden-sword' && resources.wood >= 2) {
-                resources.wood -= 2;
-                const newItem = { name: 'Wooden Sword', rarity: gearRarity.common };
-                player.inventory.push(newItem);
-            } else if(itemName === 'iron-sword' && resources.iron >= 3) {
-                resources.iron -= 3;
-                const newItem = { name: 'Iron Sword', rarity: gearRarity.rare };
-                player.inventory.push(newItem);
-            }
-            updateStats();
-        }
+    // Update health bars
+    function updateHealthBars() {
+      playerHealthBar.style.width = (playerStats.health / 100) * 100 + '%';
+      enemyHealthBar.style.width = (enemyStats.health / 60) * 100 + '%';
+    }
 
-        // Simulate a daily quest
-        function startQuest() {
-            const currentTime = Date.now();
-            const timeDifference = currentTime - player.lastQuestTime;
-            const questCooldown = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    // Attack function for the player
+    function playerAttack() {
+      let damage = Math.max(0, playerStats.attack - enemyStats.defense);
+      enemyStats.health -= damage;
+      if (enemyStats.health <= 0) {
+        enemyStats.health = 0;
+        alert('You have defeated the enemy!');
+      }
+      updateHealthBars();
+    }
 
-            if(timeDifference < questCooldown) {
-                alert('You must wait for your next daily quest!');
-                return;
-            }
+    // Attack function for the enemy
+    function enemyAttack() {
+      let damage = Math.max(0, enemyStats.attack - playerStats.defense);
+      playerStats.health -= damage;
+      if (playerStats.health <= 0) {
+        playerStats.health = 0;
+        alert('You have been defeated!');
+      }
+      updateHealthBars();
+    }
 
-            player.lastQuestTime = currentTime;
-            player.questsCompleted += 1;
-            localStorage.setItem('playerProgress', JSON.stringify(player));
+    // Event listeners for buttons
+    attackButton.addEventListener('click', () => {
+      playerAttack();
+      enemyAttack();  // Enemy counterattacks
+    });
 
-            // Reward system: Based on quests completed, increase stats.
-            player.atk += 5;
-            player.def += 2;
-            updateStats();
+    upgradeWeaponButton.addEventListener('click', () => {
+      playerStats.attack += 5;  // Example upgrade logic
+      alert('Weapon upgraded!');
+    });
 
-            document.getElementById('quests-status').innerText = `Quest completed! You have completed ${player.questsCompleted} quests.`;
-            localStorage.setItem('playerProgress', JSON.stringify(player));
-        }
+    upgradeArmorButton.addEventListener('click', () => {
+      playerStats.defense += 2;  // Example upgrade logic
+      alert('Armor upgraded!');
+    });
 
-        // Simulate a battle
-        function startBattle() {
-            let battleLog = document.getElementById('battle-log');
-            const enemyHp = Math.floor(Math.random() * 50) + 50;
-            let damage = player.atk - Math.floor(Math.random() * player.def);
-            if(Math.random() * 100 < player.critChance) {
-                damage *= 2;
-                battleLog.innerHTML += `<p>Critical hit! You dealt ${damage} damage to the enemy!</p>`;
-            } else {
-                battleLog.innerHTML += `<p>You dealt ${damage} damage to the enemy!</p>`;
-            }
-
-            if(enemyHp <= 0) {
-                battleLog.innerHTML += `<p>You won the battle!</p>`;
-            } else {
-                battleLog.innerHTML += `<p>The enemy's remaining health is ${enemyHp - damage}</p>`;
-            }
-        }
-
-        // Initialize game
-        updateStats();
-    </script>
+    // Initial health bar setup
+    updateHealthBars();
+  </script>
 </body>
 </html>
